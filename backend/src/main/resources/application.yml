@@ -1,0 +1,58 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: smartlearning-backend
+
+  config:
+    import: optional:file:./application-secret.yml
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/smartlearning?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+
+app:
+  jwt:
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  admin:
+    default-username: ${ADMIN_DEFAULT_USERNAME:admin}
+  pdf-service:
+    base-url: ${PDF_SERVICE_URL:http://localhost:8001}
+  upload:
+    dir: ${UPLOAD_DIR:./uploads}
+  oauth2:
+    frontend-redirect-uri: ${FRONTEND_REDIRECT_URI:http://localhost:3000/oauth2/redirect}
+  llm:
+    provider: ${LLM_PROVIDER:openai}
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    model: ${OPENAI_MODEL:gpt-4o-mini}
+
+logging:
+  level:
+    com.smartlearning: INFO
