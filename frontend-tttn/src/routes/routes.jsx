@@ -1,70 +1,26 @@
-// import React from 'react';
-// import Home from '~/page/DashboardPage.jsx';
-// import LoginPage from '~/page/auth/LoginPage.jsx';
-// import DocumentPage from '~/page/DocumentsPage.jsx';
-// import HistoryPage from '~/page/HistoryPage.jsx';
-// import SearchPage from '~/page/SearchPage.jsx';
-// import ErrorPage from '~/page/NotFoundPage.jsx';
-// // import OAuthRedirect from '~/page/auth/OAuthRedirect.jsx';
-
-
-// const publicRoute = [
-//     {path: '/login', element: <LoginPage/>, layout: null},
-//     // {path: '/oauth2/redirect', element: <OAuthRedirect/>, layout: null},
-//     {path: '/', element: <Home/>},
-// ]
-
-// // const adminRouter = [
-// //     {path: '/admin', element: <Dashboard/>},
-// //     {path: '/admin/users', element: <UserManagement/>},
-// //     {path: '/admin/places', element: <PlaceManagement/>},
-// // ]
-
-// const privateRoute = [
-//     {path: '/history', element: <HistoryPage/>},
-//     {path: '/document/:id', element: <DocumentPage/>},
-//     {path: '/search', element: <SearchPage/>},
-//     {path: '/error', element: <ErrorPage/>},
-    
-// ]
-// // adminRouter
-// export {publicRoute, privateRoute};
-import Home from "~/page/DashboardPage.jsx";
+import DashboardPage from "~/page/DashboardPage.jsx";
 import LoginPage from "~/page/auth/LoginPage.jsx";
-import DocumentPage from "~/page/DocumentsPage.jsx";
+import OAuthRedirect from "~/page/auth/OAuthRedirect.jsx";
+import DocumentsPage from "~/page/DocumentsPage.jsx";
+import DocumentDetailPage from "~/page/DocumentDetailPage.jsx";
 import HistoryPage from "~/page/HistoryPage.jsx";
 import SearchPage from "~/page/SearchPage.jsx";
-import ErrorPage from "~/page/NotFoundPage.jsx";
 
+// layout: null -> render KHÔNG có Header/Sidebar (dùng cho trang login,
+// trang trung gian OAuth redirect). Không set layout -> mặc định bọc
+// DefaultLayout (xem AppRoute.jsx).
 const publicRoute = [
-  {
-    path: "/login",
-    element: <LoginPage />,
-    layout: null,
-  },
-  {
-    path: "/",
-    element: <Home />,
-  },
+  { path: "/login", element: <LoginPage />, layout: null },
+  { path: "/oauth2/redirect", element: <OAuthRedirect />, layout: null },
 ];
 
+// Mọi route ở đây đều yêu cầu đã đăng nhập (JWT hợp lệ) — xem PrivateRoute.jsx.
 const privateRoute = [
-  {
-    path: "/history",
-    element: <HistoryPage />,
-  },
-  {
-    path: "/document/:id",
-    element: <DocumentPage />,
-  },
-  {
-    path: "/search",
-    element: <SearchPage />,
-  },
-  {
-    path: "/error",
-    element: <ErrorPage />,
-  },
+  { path: "/", element: <DashboardPage /> },
+  { path: "/documents", element: <DocumentsPage /> },
+  { path: "/document/:documentId", element: <DocumentDetailPage /> },
+  { path: "/search", element: <SearchPage /> },
+  { path: "/history", element: <HistoryPage /> },
 ];
 
 export { publicRoute, privateRoute };

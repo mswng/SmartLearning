@@ -2,16 +2,22 @@ package com.smartlearning.service;
 
 import com.smartlearning.client.PdfServiceClient;
 import com.smartlearning.dto.DocumentDto;
+import com.smartlearning.entity.Conversation;
 import com.smartlearning.entity.Document;
 import com.smartlearning.entity.DocumentStatus;
+import com.smartlearning.entity.Quiz;
+import com.smartlearning.repository.ConversationRepository;
 import com.smartlearning.repository.DocumentRepository;
+import com.smartlearning.repository.MessageRepository;
+import com.smartlearning.repository.QuizQuestionRepository;
+import com.smartlearning.repository.QuizRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,6 +31,10 @@ import java.util.UUID;
 public class DocumentService {
 
     private final DocumentRepository documentRepository;
+    private final ConversationRepository conversationRepository;
+    private final MessageRepository messageRepository;
+    private final QuizRepository quizRepository;
+    private final QuizQuestionRepository quizQuestionRepository;
     private final PdfServiceClient pdfServiceClient;
 
     @Value("${app.upload.dir:./uploads}")
@@ -79,8 +89,21 @@ public class DocumentService {
         return doc;
     }
 
+    @Transactional
     public void delete(Long userId, Long documentId) {
         Document doc = getOwned(userId, documentId);
+        List<Conversation> conversations = conversationRepository.findByDocumentId(documentId);
+        for (Conversation c : conversations) {
+            messageRepository.deleteByConversationId(c.getId());
+        }
+        conversationRepository.deleteAll(conversations);
+
+        List<Quiz> quizzes = quizRepository.findByDocumentId(documentId);
+        for (Quiz q : quizzes) {
+            quizQuestionRepository.deleteByQuizId(q.getId());
+        }
+        quizRepository.deleteAll(quizzes);
+
         if (doc.getVectorDocId() != null) {
             try {
                 pdfServiceClient.deleteIndex(doc.getVectorDocId());

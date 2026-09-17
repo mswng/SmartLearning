@@ -10,16 +10,6 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
-/**
- * Talks to any OpenAI-compatible /chat/completions endpoint. Works unmodified
- * against OpenAI, Azure OpenAI (with the right base-url), or a local
- * Ollama/vLLM server started with an OpenAI-compatible API.
- *
- * When no API key is configured (app.llm.api-key is blank), this falls back
- * to a simple extractive stub so the rest of the app (chat, summary, quiz)
- * is still exercisable without external credentials. Swap in a real key to
- * get real generations — no other code changes needed.
- */
 @Component
 public class OpenAiLlmClient implements LlmClient {
 

@@ -23,7 +23,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
-    @Value("${app.oauth2.frontend-redirect-uri:http://localhost:3000/oauth2/redirect}")
+    @Value("${app.oauth2.frontend-redirect-uri:http://localhost:5173/oauth2/redirect}")
     private String frontendRedirectUri;
 
     @Override
@@ -35,6 +35,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String email = oAuth2User.getAttribute("email");
         String name = oAuth2User.getAttribute("name");
         String googleId = oAuth2User.getAttribute("sub");
+        String picture = oAuth2User.getAttribute("picture");
 
         User user = userRepository.findByEmail(email).orElseGet(() ->
                 userRepository.save(User.builder()

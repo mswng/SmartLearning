@@ -12,6 +12,9 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
@@ -41,29 +44,56 @@ public class PdfServiceClient {
     }
 
     public List<SearchResultDto> search(String vectorDocId, String query, int topK) {
-        SearchRequestBody req = new SearchRequestBody(query, topK);
-        SearchResponseBody resp = restTemplate.postForObject(
-                baseUrl + "/search/" + vectorDocId, req, SearchResponseBody.class);
+        try {
+            SearchRequestBody req = new SearchRequestBody(query, topK);
+            SearchResponseBody resp = restTemplate.postForObject(
+                    baseUrl + "/search/" + vectorDocId, req, SearchResponseBody.class);
 
-        if (resp == null || resp.hits == null) return List.of();
-        return resp.hits.stream()
-                .map(h -> new SearchResultDto(h.text, h.page, h.score))
-                .collect(Collectors.toList());
+            if (resp == null || resp.hits == null) return List.of();
+            return resp.hits.stream()
+                    .map(h -> new SearchResultDto(h.text, h.page, h.score))
+                    .collect(Collectors.toList());
+        } catch (RestClientException e) {
+            throw translate(e, vectorDocId);
+        }
     }
 
-    /** Every chunk of the document, in reading order — used for summary/quiz generation. */
     public List<SearchResultDto> fullText(String vectorDocId) {
-        FullTextResponseBody resp = restTemplate.getForObject(
-                baseUrl + "/fulltext/" + vectorDocId, FullTextResponseBody.class);
+        try {
+            FullTextResponseBody resp = restTemplate.getForObject(
+                    baseUrl + "/fulltext/" + vectorDocId, FullTextResponseBody.class);
 
-        if (resp == null || resp.chunks == null) return List.of();
-        return resp.chunks.stream()
-                .map(h -> new SearchResultDto(h.text, h.page, h.score))
-                .collect(Collectors.toList());
+            if (resp == null || resp.chunks == null) return List.of();
+            return resp.chunks.stream()
+                    .map(h -> new SearchResultDto(h.text, h.page, h.score))
+                    .collect(Collectors.toList());
+        } catch (RestClientException e) {
+            throw translate(e, vectorDocId);
+        }
     }
 
     public void deleteIndex(String vectorDocId) {
         restTemplate.delete(baseUrl + "/index/" + vectorDocId);
+    }
+    private PdfServiceException translate(RestClientException e, String vectorDocId) {
+        if (e instanceof ResourceAccessException) {
+            return new PdfServiceException(
+                    "Không kết nối được tới pdf-service tại " + baseUrl
+                            + ". Kiểm tra pdf-service đã chạy chưa (uvicorn main:app --port 8001).", e);
+        }
+        if (e instanceof HttpClientErrorException httpEx && httpEx.getStatusCode().value() == 404) {
+            return new PdfServiceException(
+                    "Không tìm thấy dữ liệu đã xử lý cho tài liệu này trên pdf-service (vectorDocId="
+                            + vectorDocId + "). Nếu pdf-service từng bị khởi động lại từ thư mục khác, "
+                            + "index FAISS cũ (lưu ở đường dẫn tương đối ./data/faiss) sẽ không tìm thấy nữa "
+                            + "— hãy xóa và tải lại tài liệu này.", e);
+        }
+        return new PdfServiceException("Lỗi khi gọi pdf-service: " + e.getMessage(), e);
+    }
+    public static class PdfServiceException extends RuntimeException {
+        public PdfServiceException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
 
     @Data

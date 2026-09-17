@@ -1,0 +1,160 @@
+.document-detail-page {
+  &__title {
+    margin: 0 0 16px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #111827;
+    text-align: left;
+  }
+
+  &__tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  &__tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 10px 16px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+
+    &:hover {
+      color: #111827;
+    }
+
+    &--active {
+      color: #4f46e5;
+      border-bottom-color: #4f46e5;
+    }
+  }
+
+  &__error {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #dc2626;
+  }
+
+  &__quiz-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+
+    label {
+      font-size: 13px;
+      color: #374151;
+    }
+
+    input {
+      width: 60px;
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 14px;
+
+      &:focus {
+        outline: none;
+        border-color: #4f46e5;
+      }
+    }
+  }
+
+  &__panel {
+    text-align: left;
+  }
+
+  &__chat {
+    display: flex;
+    flex-direction: column;
+    height: 60vh;
+  }
+
+  &__messages {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 4px 4px 16px;
+  }
+
+  &__hint {
+    color: #9ca3af;
+    font-size: 13px;
+    text-align: center;
+    margin-top: 40px;
+  }
+
+  &__error {
+    margin: 8px 0;
+    font-size: 13px;
+    color: #dc2626;
+  }
+
+  &__summary-text {
+    font-size: 14px;
+    line-height: 165%;
+    color: #374151;
+    margin: 0 0 20px;
+
+    p {
+      margin: 0 0 10px;
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    ul,
+    ol {
+      margin: 4px 0 10px;
+      padding-left: 20px;
+    }
+
+    strong {
+      font-weight: 700;
+    }
+  }
+
+  &__section-summary {
+    padding: 12px 0;
+    border-top: 1px solid #f0f0f0;
+
+    p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      line-height: 160%;
+      color: #4b5563;
+    }
+  }
+
+  &__section-pages {
+    font-size: 12px;
+    font-weight: 700;
+    color: #4f46e5;
+  }
+
+  &__quiz-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 20px;
+  }
+
+  h3 {
+    font-size: 15px;
+    margin: 20px 0 10px;
+    color: #111827;
+  }
+}

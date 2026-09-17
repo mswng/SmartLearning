@@ -10,66 +10,34 @@ import {
 
 import "./Sidebar.scss";
 
+const navClass = ({ isActive }) =>
+  `sidebar__item${isActive ? " active" : ""}`;
+
 function Sidebar() {
   return (
     <aside className="sidebar">
 
-      <div className="sidebar__logo">
-        <Brain size={28} />
-
-        <span>
-          SmartLearn
-        </span>
-      </div>
-
       <nav className="sidebar__menu">
-
-        <NavLink
-          to="/"
-          className="sidebar__item"
-        >
+        <NavLink to="/" end className={navClass}>
           <LayoutDashboard size={20} />
-
-          <span>
-            Dashboard
-          </span>
+          <span>Trang chủ</span>
         </NavLink>
 
-        <NavLink
-          to="/documents"
-          className="sidebar__item"
-        >
+        <NavLink to="/documents" className={navClass}>
           <FileText size={20} />
-
-          <span>
-            Documents
-          </span>
+          <span>Tài liệu</span>
         </NavLink>
 
-        <NavLink
-          to="/search"
-          className="sidebar__item"
-        >
+        <NavLink to="/search" className={navClass}>
           <Search size={20} />
-
-          <span>
-            Semantic Search
-          </span>
+          <span>Tìm kiếm ngữ nghĩa</span>
         </NavLink>
 
-        <NavLink
-          to="/history"
-          className="sidebar__item"
-        >
+        <NavLink to="/history" className={navClass}>
           <History size={20} />
-
-          <span>
-            History
-          </span>
+          <span>Lịch sử</span>
         </NavLink>
-
       </nav>
-
     </aside>
   );
 }
