@@ -1,0 +1,153 @@
+.admin-documents-page {
+  &__title {
+    margin: 0 0 4px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    text-align: left;
+  }
+
+  &__subtitle {
+    margin: 0 0 20px;
+    font-size: 13px;
+    color: #6b7280;
+    max-width: 640px;
+    text-align: left;
+  }
+
+  &__error {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #dc2626;
+    text-align: left;
+  }
+
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+
+    select {
+      padding: 9px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 13px;
+      background-color: #ffffff;
+      min-width: 240px;
+
+      &:focus {
+        outline: none;
+        border-color: #4f46e5;
+      }
+    }
+  }
+
+  &__summary {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: #4b5563;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+  }
+
+  &__table-wrap {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: auto;
+    background-color: #ffffff;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 760px;
+
+    th,
+    td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #f0f0f0;
+      white-space: nowrap;
+    }
+
+    th {
+      background-color: #f9fafb;
+      color: #6b7280;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background-color: #fafafa;
+    }
+  }
+
+  &__filename {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__owner-email {
+    font-size: 11px;
+    color: #9ca3af;
+  }
+
+  &__status {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background-color: #f3f4f6;
+    color: #4b5563;
+
+    &--ready {
+      background-color: #ecfdf5;
+      color: #059669;
+    }
+    &--processing,
+    &--uploaded {
+      background-color: #fffbeb;
+      color: #d97706;
+    }
+    &--failed {
+      background-color: #fef2f2;
+      color: #dc2626;
+    }
+  }
+
+  &__delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #dc2626;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #fef2f2;
+      border-color: #fecaca;
+    }
+  }
+}

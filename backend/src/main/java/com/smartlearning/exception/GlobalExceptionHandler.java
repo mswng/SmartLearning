@@ -13,6 +13,12 @@ import java.util.NoSuchElementException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(com.smartlearning.exception.AccountLockedException.class)
+    public ResponseEntity<Map<String, String>> handleAccountLocked(
+            com.smartlearning.exception.AccountLockedException e) {
+        return ResponseEntity.status(HttpStatus.LOCKED).body(Map.of("error", e.getMessage()));
+    }
+
     @ExceptionHandler(com.smartlearning.client.PdfServiceClient.PdfServiceException.class)
     public ResponseEntity<Map<String, String>> handlePdfServiceError(
             com.smartlearning.client.PdfServiceClient.PdfServiceException e) {

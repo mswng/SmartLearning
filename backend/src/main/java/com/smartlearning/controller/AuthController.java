@@ -3,6 +3,8 @@ package com.smartlearning.controller;
 import com.smartlearning.config.JwtAuthFilter.AuthenticatedUser;
 import com.smartlearning.dto.AuthResponse;
 import com.smartlearning.dto.LoginRequest;
+import com.smartlearning.entity.User;
+import com.smartlearning.repository.UserRepository;
 import com.smartlearning.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * Google login for regular users is NOT handled here — it's Spring Security's
@@ -27,6 +30,7 @@ import java.util.Map;
 public class AuthController {
 
     private final UserService userService;
+    private final UserRepository userRepository;
 
     @PostMapping("/admin/login")
     public ResponseEntity<AuthResponse> adminLogin(@Valid @RequestBody LoginRequest request) {
@@ -34,11 +38,15 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<Map<String, Object>> me(@AuthenticationPrincipal AuthenticatedUser user) {
+    public ResponseEntity<Map<String, Object>> me(@AuthenticationPrincipal AuthenticatedUser principal) {
+        User user = userRepository.findById(principal.id())
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
         return ResponseEntity.ok(Map.of(
-                "id", user.id(),
-                "email", user.email(),
-                "role", user.role()
+                "id", user.getId(),
+                "name", user.getName(),
+                "email", user.getEmail(),
+                "role", user.getRole().name()
         ));
     }
 

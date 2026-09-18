@@ -39,7 +39,7 @@ function LoginPage() {
           <span>SmartLearning</span>
         </div>
 
-        <p className="login-page__subtitle">Học cùng AI, trò chuyện với tài liệu PDF</p>
+        <p className="login-page__subtitle">Trò chuyện và học cùng AI</p>
 
         {/* Không phải API call — chuyển hướng thẳng trình duyệt sang
             backend, backend redirect tiếp sang Google rồi quay lại

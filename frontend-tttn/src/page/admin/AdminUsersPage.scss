@@ -1,0 +1,150 @@
+.admin-users-page {
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+
+  &__title {
+    margin: 0 0 4px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    text-align: left;
+  }
+
+  &__subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: #6b7280;
+    max-width: 520px;
+    text-align: left;
+  }
+
+  &__error {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: #dc2626;
+    text-align: left;
+  }
+
+  &__table-wrap {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #ffffff;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    th,
+    td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    th {
+      background-color: #f9fafb;
+      color: #6b7280;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background-color: #fafafa;
+    }
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background-color: #f3f4f6;
+    color: #4b5563;
+
+    &--admin {
+      background-color: #eef2ff;
+      color: #4f46e5;
+    }
+
+    &--active {
+      background-color: #ecfdf5;
+      color: #059669;
+    }
+
+    &--locked {
+      background-color: #fef2f2;
+      color: #dc2626;
+    }
+  }
+
+  &__lock-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 6px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #dc2626;
+
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background-color: #fef2f2;
+      border-color: #fecaca;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &--locked {
+      color: #059669;
+
+      &:hover:not(:disabled) {
+        background-color: #ecfdf5;
+        border-color: #a7f3d0;
+      }
+    }
+  }
+
+  &__create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    input {
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 14px;
+
+      &:focus {
+        outline: none;
+        border-color: #4f46e5;
+      }
+    }
+  }
+}

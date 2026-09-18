@@ -28,14 +28,13 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                                         Authentication authentication) throws IOException, ServletException {
+                                        Authentication authentication) throws IOException, ServletException {
 
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
         String email = oAuth2User.getAttribute("email");
         String name = oAuth2User.getAttribute("name");
         String googleId = oAuth2User.getAttribute("sub");
-        String picture = oAuth2User.getAttribute("picture");
 
         User user = userRepository.findByEmail(email).orElseGet(() ->
                 userRepository.save(User.builder()
@@ -50,6 +49,16 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         if (user.getGoogleId() == null) {
             user.setGoogleId(googleId);
             userRepository.save(user);
+        }
+
+        // Tài khoản bị admin khóa -> không phát JWT, báo lỗi qua query param
+        // để frontend (OAuthRedirect.jsx) hiển thị thông báo thay vì đăng nhập.
+        if (!user.isEnabled()) {
+            String lockedUrl = UriComponentsBuilder.fromUriString(frontendRedirectUri)
+                    .queryParam("error", "account_locked")
+                    .build().toUriString();
+            response.sendRedirect(lockedUrl);
+            return;
         }
 
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());

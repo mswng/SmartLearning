@@ -58,6 +58,7 @@ public class PdfServiceClient {
         }
     }
 
+    /** Every chunk of the document, in reading order — used for summary/quiz generation. */
     public List<SearchResultDto> fullText(String vectorDocId) {
         try {
             FullTextResponseBody resp = restTemplate.getForObject(
@@ -75,6 +76,12 @@ public class PdfServiceClient {
     public void deleteIndex(String vectorDocId) {
         restTemplate.delete(baseUrl + "/index/" + vectorDocId);
     }
+
+    /**
+     * Biến lỗi HTTP/kết nối mù mờ từ RestTemplate thành thông điệp người
+     * dùng đọc hiểu được, thay vì để nó rơi thẳng xuống 500 generic ở
+     * GlobalExceptionHandler.
+     */
     private PdfServiceException translate(RestClientException e, String vectorDocId) {
         if (e instanceof ResourceAccessException) {
             return new PdfServiceException(
@@ -90,6 +97,8 @@ public class PdfServiceClient {
         }
         return new PdfServiceException("Lỗi khi gọi pdf-service: " + e.getMessage(), e);
     }
+
+    /** Lỗi tầng tích hợp với pdf-service — ánh xạ sang HTTP 503 ở GlobalExceptionHandler. */
     public static class PdfServiceException extends RuntimeException {
         public PdfServiceException(String message, Throwable cause) {
             super(message, cause);

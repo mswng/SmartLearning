@@ -1,10 +1,12 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
 
-import { privateRoute, publicRoute } from "./routes.jsx";
+import { adminRoute, privateRoute, publicRoute } from "./routes.jsx";
 import PrivateRoute from "./PrivateRoute.jsx";
+import AdminRoute from "./AdminRoute.jsx";
 
 import DefaultLayout from "~/components/layouts/defaultLayout/DefaultLayout.jsx";
+import DefaultAdminLayout from "~/components/adminLayouts/defaultAdminLayout/defaultAdminLayout.jsx";
 import NotFoundPage from "~/page/NotFoundPage.jsx";
 
 function AppRouter() {
@@ -30,6 +32,18 @@ function AppRouter() {
             <PrivateRoute>
               <DefaultLayout>{item.element}</DefaultLayout>
             </PrivateRoute>
+          }
+        />
+      ))}
+
+      {adminRoute.map((item) => (
+        <Route
+          key={item.path}
+          path={item.path}
+          element={
+            <AdminRoute>
+              <DefaultAdminLayout>{item.element}</DefaultAdminLayout>
+            </AdminRoute>
           }
         />
       ))}

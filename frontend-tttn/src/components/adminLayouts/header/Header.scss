@@ -1,0 +1,122 @@
+.header {
+  height: 64px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 24px;
+
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+
+  // =========================
+  // Logo
+  // =========================
+  &__logo {
+    display: flex;
+    align-items: center;
+  }
+
+  &__logo-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    color: #4f46e5;
+
+    font-size: 18px;
+    font-weight: 700;
+
+    text-decoration: none;
+
+    transition: color 0.2s;
+
+    &:hover {
+      color: #4338ca;
+    }
+  }
+
+  // =========================
+  // User
+  // =========================
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__username {
+    font-size: 14px;
+    font-weight: 500;
+
+    color: #374151;
+  }
+
+  // =========================
+  // Avatar
+  // =========================
+  &__avatar {
+    width: 36px;
+    height: 36px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+    overflow: hidden;
+
+    background-color: #4f46e5;
+
+    color: #ffffff;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    img {
+      width: 100%;
+      height: 100%;
+
+      display: block;
+
+      object-fit: cover;
+
+      border-radius: 50%;
+    }
+  }
+
+  // =========================
+  // Logout
+  // =========================
+  &__logout {
+    width: 34px;
+    height: 34px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    border: none;
+    border-radius: 8px;
+
+    background: transparent;
+
+    color: #6b7280;
+
+    cursor: pointer;
+
+    transition:
+      background-color 0.2s,
+      color 0.2s;
+
+    &:hover {
+      background-color: #fef2f2;
+      color: #dc2626;
+    }
+  }
+}

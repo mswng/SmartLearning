@@ -92,6 +92,28 @@ public class DocumentService {
     @Transactional
     public void delete(Long userId, Long documentId) {
         Document doc = getOwned(userId, documentId);
+        deleteInternal(doc);
+    }
+
+    /**
+     * Admin xóa tài liệu với vai trò kiểm duyệt (không kiểm tra chủ sở
+     * hữu) — dùng khi cần đảm bảo nội dung không tiếp tục tồn tại/rò rỉ,
+     * KHÔNG dùng để admin xem nội dung (chỉ xóa, không đọc được gì).
+     */
+    @Transactional
+    public void adminDelete(Long documentId) {
+        Document doc = documentRepository.findById(documentId)
+                .orElseThrow(() -> new NoSuchElementException("Document not found"));
+        deleteInternal(doc);
+    }
+
+    private void deleteInternal(Document doc) {
+        Long documentId = doc.getId();
+
+        // Xóa hết dữ liệu con trước — bảng conversations/quizzes có khóa
+        // ngoại trỏ về documents, xóa document trước sẽ bị MySQL từ chối
+        // (foreign key constraint violation -> 500) nếu tài liệu đã từng
+        // được chat hoặc tạo quiz.
         List<Conversation> conversations = conversationRepository.findByDocumentId(documentId);
         for (Conversation c : conversations) {
             messageRepository.deleteByConversationId(c.getId());

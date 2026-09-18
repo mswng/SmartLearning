@@ -1,5 +1,6 @@
 package com.smartlearning.config;
 
+import com.smartlearning.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,11 +21,12 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                     @NonNull HttpServletResponse response,
-                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
 
@@ -32,21 +34,33 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = header.substring(7);
 
             if (jwtUtil.isValid(token)) {
-                String email = jwtUtil.getEmail(token);
                 Long userId = jwtUtil.getUserId(token);
+                String email = jwtUtil.getEmail(token);
                 String role = jwtUtil.getRole(token);
 
-                var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
-                var authToken = new UsernamePasswordAuthenticationToken(
-                        new AuthenticatedUser(userId, email, role), null, authorities);
+                // Kiểm tra "enabled" ngay trong request thay vì chỉ tin vào JWT,
+                // để admin khóa tài khoản có hiệu lực NGAY LẬP TỨC — không phải
+                // đợi tới khi JWT cũ (còn hạn tới 24h) hết hạn. Chấp nhận đánh
+                // đổi 1 query DB/request để đổi lấy việc khóa tài khoản hoạt
+                // động đúng như admin mong đợi.
+                boolean stillEnabled = userId != null
+                        && userRepository.findById(userId).map(u -> u.isEnabled()).orElse(false);
 
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                if (stillEnabled) {
+                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+                    var authToken = new UsernamePasswordAuthenticationToken(
+                            new AuthenticatedUser(userId, email, role), null, authorities);
+
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+                // else: không set Authentication -> Spring Security tự trả 401/403
+                // cho các endpoint yêu cầu đăng nhập, coi như request ẩn danh.
             }
         }
 
         filterChain.doFilter(request, response);
     }
 
-    /** Lightweight principal placed in the SecurityContext — avoids a DB hit per request. */
+    /** Lightweight principal placed in the SecurityContext. */
     public record AuthenticatedUser(Long id, String email, String role) {}
 }

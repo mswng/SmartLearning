@@ -39,6 +39,11 @@ public class User {
     @Column(name = "google_id", length = 100)
     private String googleId;
 
+    /** Admin có thể khóa tài khoản — user bị khóa không đăng nhập/dùng API được nữa. */
+    @Column(nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
+    @Builder.Default
+    private boolean enabled = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

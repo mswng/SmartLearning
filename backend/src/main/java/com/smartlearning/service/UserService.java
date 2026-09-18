@@ -2,10 +2,12 @@ package com.smartlearning.service;
 
 import com.smartlearning.config.JwtUtil;
 import com.smartlearning.dto.AuthResponse;
+import com.smartlearning.dto.CreateAdminRequest;
 import com.smartlearning.dto.UserDto;
 import com.smartlearning.dto.UserUpsertRequest;
 import com.smartlearning.entity.Role;
 import com.smartlearning.entity.User;
+import com.smartlearning.exception.AccountLockedException;
 import com.smartlearning.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,8 +35,12 @@ public class UserService {
             throw new IllegalArgumentException("Invalid credentials");
         }
 
+        if (!user.isEnabled()) {
+            throw new AccountLockedException("Tài khoản đã bị khóa");
+        }
+
         String token = jwtUtil.generateToken(user.getId(), user.getEmail(), user.getRole().name());
-        return new AuthResponse(token, user.getName(), user.getEmail(), user.getRole().name());
+        return new AuthResponse(user.getId(), token, user.getName(), user.getEmail(), user.getRole().name());
     }
 
     public List<UserDto> listUsers() {
@@ -51,6 +57,28 @@ public class UserService {
                 .password(req.getPassword() != null ? passwordEncoder.encode(req.getPassword()) : null)
                 .role(req.getRole() != null ? Role.valueOf(req.getRole()) : Role.USER)
                 .build();
+        return toDto(userRepository.save(user));
+    }
+
+    /** Admin quản lý tài khoản: theo yêu cầu chỉ được KHÓA/MỞ và TẠO admin mới — không sửa/xóa tự do. */
+    public UserDto createAdmin(CreateAdminRequest req) {
+        if (userRepository.existsByEmail(req.getEmail())) {
+            throw new IllegalArgumentException("Email đã được sử dụng");
+        }
+        User admin = User.builder()
+                .name(req.getName())
+                .email(req.getEmail())
+                .password(passwordEncoder.encode(req.getPassword()))
+                .role(Role.ADMIN)
+                .enabled(true)
+                .build();
+        return toDto(userRepository.save(admin));
+    }
+
+    public UserDto setEnabled(Long userId, boolean enabled) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy người dùng"));
+        user.setEnabled(enabled);
         return toDto(userRepository.save(user));
     }
 
@@ -74,6 +102,6 @@ public class UserService {
     }
 
     private UserDto toDto(User u) {
-        return new UserDto(u.getId(), u.getName(), u.getEmail(), u.getRole().name(), u.getCreatedAt());
+        return new UserDto(u.getId(), u.getName(), u.getEmail(), u.getRole().name(), u.isEnabled(), u.getCreatedAt());
     }
 }
