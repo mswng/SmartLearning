@@ -1,184 +1,362 @@
-# SmartLearning — prototype
+# 🎓 Smart Learning
 
-A working RAG-based PDF study assistant: upload a PDF, chat with it (with page
-citations), get AI summaries, and generate MCQ quizzes.
+**Smart Learning** là nền tảng học tập thông minh ứng dụng **Artificial Intelligence (AI)** và **Retrieval-Augmented Generation (RAG)**, hỗ trợ người dùng khai thác kiến thức trực tiếp từ tài liệu học tập PDF.
 
-## Architecture
+Hệ thống cho phép người dùng tải tài liệu lên, tìm kiếm nội dung theo ngữ nghĩa, đặt câu hỏi với AI, tóm tắt tài liệu và tạo Quiz phục vụ quá trình học tập và ôn luyện.
 
-Two services, on purpose:
+---
 
-```
-┌─────────────┐  REST/JWT   ┌──────────────────────┐  REST   ┌───────────────────────┐
-│   Frontend   │────────────▶│  Spring Boot backend  │────────▶│  Python pdf-service    │
-│ (bring your  │             │  - Auth (Google OAuth2│         │  (FastAPI)             │
-│  own; not    │             │    + JWT, admin login)│         │  - PyMuPDF extraction  │
-│  built here) │             │  - users/documents/   │         │  - chunking            │
-└─────────────┘             │    conversations/      │         │  - sentence-transformers│
-                             │    messages/quizzes    │         │    embeddings          │
-                             │    (MySQL via JPA)     │         │  - FAISS index/search  │
-                             │  - RAG orchestration    │         └───────────────────────┘
-                             │  - LLM client (OpenAI-  │
-                             │    compatible, pluggable)│
-                             └──────────────────────┘
-                                        │
-                                   ┌────▼────┐
-                                   │  MySQL  │
-                                   └─────────┘
-```
+## ✨ Chức năng chính
 
-**Why split it this way:** PyMuPDF and FAISS are Python-native — trying to
-reimplement them in Java would mean losing real libraries for something
-worse. Spring Boot owns everything relational, auth, and orchestration; the
-Python service is a stateless "PDF → vectors" worker it calls over HTTP. This
-is the same shape you'd use in production, just without a message queue in
-front of the Python service yet (see "extend first" below).
+- Đăng nhập bằng Google OAuth2
+- Upload và quản lý tài liệu PDF
+- Trích xuất và xử lý nội dung tài liệu
+- Semantic Search
+- AI Chat dựa trên tài liệu bằng RAG
+- Hiển thị nguồn/trang tham khảo của câu trả lời
+- Tóm tắt tài liệu bằng AI
+- Tạo Quiz tự động từ nội dung tài liệu
+- Lưu lịch sử hội thoại
+- Dashboard tổng quan
 
-**LLM calls** (chat answers, summaries, quiz questions) go through a small
-`LlmClient` interface in the backend, implemented against any
-OpenAI-compatible `/chat/completions` endpoint — OpenAI itself, Azure OpenAI,
-or a local Ollama/vLLM server. **No API key is required to run the
-prototype**: with `OPENAI_API_KEY` unset, `LlmClient` falls back to an
-extractive stub (clearly labeled in the output) so upload → search → chat →
-summary → quiz all work end-to-end and you can see the real plumbing (FAISS
-retrieval, page citations, DB writes) before spending any money on a model.
+---
 
-## Project layout
+## 🏗️ Kiến trúc hệ thống
 
-```
-smartlearning/
-├── docker-compose.yml
-├── schema-reference.sql        # what Hibernate auto-creates — for review only
-├── pdf-service/                # Python/FastAPI
-│   ├── main.py
-│   ├── requirements.txt
-│   └── Dockerfile
-└── backend/                    # Spring Boot
-    ├── pom.xml
-    ├── Dockerfile
-    └── src/main/
-        ├── resources/application.yml
-        └── java/com/smartlearning/
-            ├── SmartLearningApplication.java
-            ├── entity/          # User, Document, Conversation, Message, Quiz, QuizQuestion + enums
-            ├── repository/      # Spring Data JPA interfaces
-            ├── dto/             # request/response shapes
-            ├── config/          # JWT, security, OAuth2 success handler, admin seeder
-            ├── client/          # PdfServiceClient (→Python), LlmClient (→OpenAI-compatible)
-            ├── service/         # UserService, DocumentService, SearchService, ChatService,
-            │                    # SummaryService, QuizService, DashboardService
-            └── controller/      # Auth, Admin, Document, Search, Chat, Summary, Quiz
-```
+Smart Learning được xây dựng theo mô hình **Client – Server** kết hợp với một **AI Service độc lập**.
 
-## Running it
+### Frontend
 
-**Prerequisites:** Docker + Docker Compose. That's it — MySQL, both services,
-and all dependencies run in containers.
+- React
+- React Router
+- Axios
+- SCSS
 
-```bash
-cd smartlearning
-docker compose up --build
-```
+### Backend
 
-First boot takes a few minutes: Maven downloads dependencies, pip installs
-`sentence-transformers`/`faiss-cpu`/`pymupdf`, and the embedding model
-(~90MB) downloads on the pdf-service's first request. Once up:
+- Java
+- Spring Boot
+- REST API
+- Spring Security
+- JWT Authentication
+- Google OAuth2
+- JPA / Hibernate
 
-- Backend: `http://localhost:8080`
-- pdf-service: `http://localhost:8001` (interactive docs at `/docs`)
-- MySQL: `localhost:3306` (db `smartlearning`, user/pass `smartlearning`)
+### Database
 
-**Default admin login:** `admin` / `admin123` (seeded on first startup —
-change `ADMIN_DEFAULT_USERNAME`/`ADMIN_DEFAULT_PASSWORD` in
-`docker-compose.yml` before any real deployment).
+- MySQL
 
-**Google OAuth2:** put real credentials in `GOOGLE_CLIENT_ID` /
-`GOOGLE_CLIENT_SECRET` in `docker-compose.yml` (create them in Google Cloud
-Console, authorized redirect URI
-`http://localhost:8080/login/oauth2/code/google`). Without real credentials
-the rest of the app still works — just log in as admin, or hit the API with
-a JWT you mint by temporarily calling `JwtUtil` in a test, since there's no
-UI here yet.
+### AI Service
 
-### Try it with curl
+- Python
+- FastAPI
+- PyMuPDF
+- Sentence Transformers
+- FAISS
+- Retrieval-Augmented Generation (RAG)
+- Gemini API
+
+
+# 🚀 Cài đặt và chạy dự án
+
+## 1. Yêu cầu môi trường
+
+Cần cài đặt:
+
+- Java 17+
+- Maven
+- Python 3.10+
+- Node.js
+- npm
+- MySQL
+- Git
+
+---
+
+## 2. Clone Repository
 
 ```bash
-# 1. Admin login
-curl -X POST localhost:8080/api/auth/admin/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"admin123"}'
-# → { "token": "eyJ...", ... }  copy the token
-
-TOKEN="paste-token-here"
-
-# 2. Upload a PDF (as that admin user, acting like any user)
-curl -X POST localhost:8080/api/documents \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "file=@/path/to/some.pdf"
-# → { "id": 1, "status": "READY", "pageCount": 12, ... }
-
-# 3. Semantic search
-curl "localhost:8080/api/documents/1/search?query=what is this document about" \
-  -H "Authorization: Bearer $TOKEN"
-
-# 4. RAG chat (page citations included)
-curl -X POST localhost:8080/api/documents/1/chat \
-  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"message":"What are the main conclusions?"}'
-
-# 5. Summary
-curl "localhost:8080/api/documents/1/summary" -H "Authorization: Bearer $TOKEN"
-
-# 6. Quiz
-curl -X POST localhost:8080/api/quizzes/generate \
-  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"documentId":1,"numQuestions":5}'
+git clone https://github.com/mswng/SmartLearning.git
+cd smart-learning
 ```
 
-### Turning on real AI answers
+---
 
-Set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`, default
-`gpt-4o-mini`) in `docker-compose.yml` under the `backend` service, then
-`docker compose up -d --build backend`. No code changes needed — chat,
-summary, and quiz generation all switch from the extractive stub to real
-model output immediately.
+# 🗄️ Cấu hình Database
 
-## What to extend first
+## 3. Tạo MySQL Database
 
-Roughly in the order I'd tackle them:
+Khởi động MySQL và tạo database:
 
-1. **Make PDF processing async.** Right now `DocumentService.upload()` calls
-   the Python service synchronously inside the HTTP request — fine for a
-   demo PDF, painful for a 300-page one. Swap it for a message queue
-   (RabbitMQ/SQS) or at minimum `@Async` + polling, with `status` going
-   `UPLOADED → PROCESSING → READY/FAILED` as it already does, just
-   non-blocking.
+```sql
+CREATE DATABASE smart_learning;
+```
 
-2. **Real migrations.** `ddl-auto=update` is a prototype convenience.
-   Introduce Flyway (there's already `schema-reference.sql` to start from)
-   before you touch a schema anyone depends on.
+Cấu hình kết nối trong Spring Boot:
 
-3. **A frontend.** Everything here is API-only. React/Vue talking to these
-   endpoints, with the Google button hitting
-   `GET /oauth2/authorization/google` and reading `?token=` off the redirect,
-   is the natural next piece — probably the highest-value next step overall.
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/smart_learning
+spring.datasource.username=root
+spring.datasource.password=your_password
 
-4. **Streaming chat responses.** `ChatService.ask()` waits for the full LLM
-   response before returning. For a chat UI you'll want SSE or
-   WebSocket streaming — the OpenAI-compatible API supports `stream: true`
-   already, `OpenAiLlmClient` just isn't wired for it yet.
+spring.jpa.hibernate.ddl-auto=update
+```
 
-5. **Chunk-level source tracking for quizzes/summaries at scale.** The
-   summary/quiz pipelines pull *all* chunks via `/fulltext` and either batch
-   or sample them — fine up to maybe a few hundred pages, but a
-   very large PDF will want smarter section detection (e.g. using PDF
-   bookmarks/outline via `fitz`) instead of fixed chunk-count batching.
+Hibernate sẽ tự động tạo hoặc cập nhật các bảng cần thiết khi Backend khởi động.
 
-6. **Auth hardening.** Token refresh/expiry handling on the frontend, a
-   proper logout (blacklist or short-lived tokens + refresh tokens instead
-   of one long-lived JWT), and rate limiting on `/api/auth/admin/login`.
+Các bảng chính gồm:
 
-7. **Vector store choice at scale.** FAISS indices here are one file per
-   document on local disk — simple and fast for a prototype. If you outgrow
-   that (many users, many documents, need for filtering/metadata queries),
-   look at pgvector or a managed vector DB (Pinecone/Qdrant/Weaviate) instead
-   of hand-rolling FAISS file management.
+```text
+users
+documents
+conversations
+messages
+quizzes
+quiz_questions
+```
+
+---
+
+# ☕ Backend – Spring Boot
+
+## 4. Cài đặt và chạy Backend
+
+Di chuyển vào thư mục Backend:
+
+```bash
+cd backend
+```
+
+Chạy project:
+
+```bash
+mvn spring-boot:run
+```
+
+Backend mặc định chạy tại:
+
+```text
+http://localhost:8080
+```
+
+Backend chịu trách nhiệm:
+
+- Authentication
+- JWT
+- Google OAuth2
+- User Management
+- Document Management
+- Conversation History
+- Quiz Management
+- Kết nối MySQL
+- Kết nối AI Service
+
+---
+
+# 🤖 AI Service – FastAPI
+
+AI Service được xây dựng bằng **Python và FastAPI**, chịu trách nhiệm xử lý các chức năng AI của hệ thống:
+
+- Trích xuất nội dung PDF
+- Tiền xử lý văn bản
+- Chunking
+- Tạo Embedding
+- FAISS Vector Search
+- Semantic Search
+- RAG Chat
+- Tóm tắt tài liệu
+- Tạo Quiz
+
+Các thư viện và công nghệ chính:
+
+- Python
+- FastAPI
+- PyMuPDF
+- Sentence Transformers
+- FAISS
+- Gemini API
+
+---
+
+## 4. Cài đặt và chạy AI service
+
+Di chuyển vào thư mục pdf-Service:
+
+```bash
+cd pdf-service
+```
+
+### Windows
+
+Chạy:
+
+```bat
+.\run.bat
+```
+
+### macOS / Linux
+
+Cấp quyền thực thi cho script nếu cần:
+
+```bash
+chmod +x run.sh
+```
+
+Sau đó chạy:
+
+```bash
+./run.sh
+```
+
+Script sẽ tự động thực hiện các bước cần thiết để khởi động AI Service.
+
+AI Service mặc định chạy tại:
+
+```text
+http://localhost:8001
+```
+
+## 🧠 Embedding Model
+
+Hệ thống sử dụng **Sentence Transformers** để tạo vector Embedding cho nội dung tài liệu và câu truy vấn.
+
+Project được cấu hình với:
+
+```text
+all-MiniLM-L6-v2
+```
+
+model sẽ được Sentence Transformers tự động tải về trong lần chạy đầu tiên.
+
+Không cần tải model thủ công.
+
+Embedding được sử dụng cho:
+
+- Document Chunk Embedding
+- Query Embedding
+- Semantic Search
+- RAG Retrieval
+
+Các vector sau khi được tạo sẽ được lập chỉ mục và tìm kiếm bằng **FAISS**.
+
+---
+
+## ✨ Cấu hình LLM – Gemini
+
+Smart Learning sử dụng **Gemini** làm Large Language Model (LLM).
+
+Gemini được sử dụng thông qua API nên **không cần tải mô hình LLM trực tiếp về máy**.
+
+Tạo file `.env` trong thư mục AI Service và cấu hình:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=your_gemini_model
+```
+
+> ⚠️ Không commit file `.env` hoặc Gemini API Key lên Git repository.
+
+---
+
+
+# ⚛️ Frontend – React
+
+## 9. Cài đặt Frontend
+
+Di chuyển vào thư mục Frontend:
+
+```bash
+cd frontend
+```
+
+Cài dependencies:
+
+```bash
+npm install
+```
+
+Chạy development server:
+
+```bash
+npm run dev
+```
+
+Frontend mặc định chạy tại:
+
+```text
+http://localhost:5173
+```
+
+---
+
+# ▶️ Thứ tự chạy hệ thống
+
+Khởi động các thành phần theo thứ tự:
+
+```text
+1. MySQL
+      ↓
+2. Spring Boot Backend
+      ↓
+3. FastAPI AI Service
+      ↓
+4. React Frontend
+```
+
+Sau đó truy cập:
+
+```text
+http://localhost:5173
+```
+
+---
+
+# 🔐 Environment Variables
+
+Các thông tin nhạy cảm không nên được commit lên repository.
+
+Ví dụ:
+
+```env
+GEMINI_API_KEY=your_api_key
+```
+
+Đảm bảo `.gitignore` có:
+
+```gitignore
+# Environment
+.env
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# React
+node_modules/
+dist/
+
+# Spring Boot
+target/
+
+# IDE
+.idea/
+.vscode/
+```
+
+---
+
+# 🎯 Mục tiêu dự án
+
+Smart Learning hướng đến việc xây dựng một nền tảng hỗ trợ người học khai thác tài liệu hiệu quả hơn bằng AI.
+
+Thay vì phải đọc và tìm kiếm thủ công trong toàn bộ tài liệu, người dùng có thể sử dụng Semantic Search và RAG để nhanh chóng tìm kiếm, hỏi đáp và tổng hợp kiến thức từ chính tài liệu của mình.
+
+Hệ thống đồng thời cung cấp các công cụ hỗ trợ học tập như tóm tắt và Quiz nhằm giúp quá trình học và ôn tập trở nên thuận tiện hơn.
+
+---
+
+## 📌 Project
+
+**Smart Learning – Nền tảng học tập thông minh ứng dụng AI và Retrieval-Augmented Generation (RAG)**
