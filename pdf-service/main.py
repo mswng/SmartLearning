@@ -3,10 +3,10 @@ SmartLearning PDF/AI microservice
 ----------------------------------
 Handles the parts of the pipeline that are genuinely Python-native:
   1. PDF text extraction with PyMuPDF (page-aware)
-  2. Chunking (page-aware, overlapping windows)
+  2. Structure-aware, token-budgeted chunking with page citations
   3. Embedding generation (sentence-transformers, runs locally, no API key needed)
   4. Per-document FAISS index build + persistence
-  5. Semantic search (top-K similar chunks, with page numbers for citation)
+  5. Document-local expansion, candidate search and passage ranking
 
 The Spring Boot backend calls this service over HTTP; it never touches
 PyMuPDF/FAISS directly. Each document gets its own FAISS index file plus a
@@ -24,7 +24,8 @@ import fitz  # PyMuPDF
 import numpy as np
 import faiss
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from pipeline import chunk_pages, terminology, expand, units, duplicate
 from sentence_transformers import SentenceTransformer
 
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "./data/uploads"))
@@ -32,6 +33,10 @@ FAISS_DIR = Path(os.getenv("FAISS_DIR", "./data/faiss"))
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 CHUNK_SIZE_CHARS = 900
 CHUNK_OVERLAP_CHARS = 150
+CANDIDATE_MULTIPLIER = 4
+PASSAGE_CHARS = 420
+MAX_QUERY_VARIANTS = 4
+INDEX_VERSION = 2
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 FAISS_DIR.mkdir(parents=True, exist_ok=True)
@@ -61,8 +66,9 @@ class ProcessResponse(BaseModel):
 
 
 class SearchRequest(BaseModel):
-    query: str
-    top_k: int = 5
+    query: str = Field(min_length=1, max_length=2000, pattern=r"\S")
+    top_k: int = Field(default=5, ge=1, le=50)
+    context: bool = False
 
 
 class SearchHit(BaseModel):
@@ -76,10 +82,15 @@ class SearchResponse(BaseModel):
     hits: List[SearchHit]
 
 
+class ContentHit(SearchHit):
+    heading: str = ""
+    section_id: str = "0"
+
+
 class FullTextResponse(BaseModel):
     document_id: str
     page_count: int
-    chunks: List[SearchHit]  # score is unused (0.0) here, reused for shape
+    chunks: List[ContentHit]
 
 
 # ---------------------------------------------------------------------------
@@ -92,23 +103,18 @@ def index_paths(document_id: str):
 
 
 def chunk_page_text(page_num: int, text: str) -> List[dict]:
-    """Split one page's text into overlapping chunks, tagging each with its page."""
-    text = re.sub(r"\s+", " ", text).strip()
-    if not text:
-        return []
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = min(start + CHUNK_SIZE_CHARS, len(text))
-        chunk = text[start:end]
-        chunks.append({"page": page_num, "text": chunk})
-        if end == len(text):
-            break
-        start = end - CHUNK_OVERLAP_CHARS
-    return chunks
+    return chunk_pages([(page_num, text)], CHUNK_SIZE_CHARS, CHUNK_OVERLAP_CHARS)
 
 
-def build_index(document_id: str, chunks: List[dict]) -> None:
+def extract_chunks(doc):
+    model = get_model()
+    def fits(text):
+        return len(model.tokenizer.encode(text, add_special_tokens=True)) <= model.max_seq_length
+    pages = [(i + 1, page.get_text("text", sort=True)) for i, page in enumerate(doc)]
+    return chunk_pages(pages, CHUNK_SIZE_CHARS, CHUNK_OVERLAP_CHARS, fits)
+
+
+def build_index(document_id: str, chunks: List[dict], page_count=None) -> None:
     model = get_model()
     texts = [c["text"] for c in chunks]
     embeddings = model.encode(texts, normalize_embeddings=True)
@@ -120,7 +126,9 @@ def build_index(document_id: str, chunks: List[dict]) -> None:
 
     index_path, meta_path = index_paths(document_id)
     faiss.write_index(index, str(index_path))
-    meta_path.write_text(json.dumps(chunks, ensure_ascii=False), encoding="utf-8")
+    meta_path.write_text(json.dumps({"version": INDEX_VERSION, "model": EMBEDDING_MODEL_NAME,
+        "page_count": page_count or max(c["page"] for c in chunks),
+        "chunks": chunks, "aliases": terminology(chunks)}, ensure_ascii=False), encoding="utf-8")
 
 
 def load_index(document_id: str):
@@ -128,8 +136,15 @@ def load_index(document_id: str):
     if not index_path.exists() or not meta_path.exists():
         raise HTTPException(status_code=404, detail="No index found for this document")
     index = faiss.read_index(str(index_path))
-    chunks = json.loads(meta_path.read_text(encoding="utf-8"))
-    return index, chunks
+    metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+    if isinstance(metadata, list):
+        # Explicit migration through /process is required to repair old word boundaries.
+        metadata = {"chunks": metadata, "aliases": terminology(metadata), "legacy": True}
+    elif metadata.get("model") != EMBEDDING_MODEL_NAME or metadata.get("version") != INDEX_VERSION:
+        raise HTTPException(status_code=409, detail="Reprocess PDF: embedding model or index version changed")
+    if index.ntotal != len(metadata["chunks"]) or index.d != get_model().get_sentence_embedding_dimension():
+        raise HTTPException(status_code=409, detail="Reprocess PDF: incompatible index")
+    return index, metadata
 
 
 # ---------------------------------------------------------------------------
@@ -158,52 +173,77 @@ async def process_pdf(file: UploadFile = File(...), document_id: Optional[str] =
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not read PDF: {exc}")
 
-    all_chunks: List[dict] = []
-    for page_index in range(len(doc)):
-        page = doc[page_index]
-        page_text = page.get_text("text")
-        all_chunks.extend(chunk_page_text(page_index + 1, page_text))  # 1-indexed pages
-
-    page_count = len(doc)
-    doc.close()
+    try:
+        all_chunks = extract_chunks(doc)
+        page_count = len(doc)
+    finally:
+        doc.close()
 
     if not all_chunks:
         raise HTTPException(status_code=422, detail="No extractable text found in PDF (scanned image PDF?)")
 
-    build_index(document_id, all_chunks)
+    build_index(document_id, all_chunks, page_count)
 
     return ProcessResponse(document_id=document_id, page_count=page_count, chunk_count=len(all_chunks))
 
 
 @app.post("/search/{document_id}", response_model=SearchResponse)
 def search(document_id: str, req: SearchRequest):
-    index, chunks = load_index(document_id)
+    index, metadata = load_index(document_id)
+    chunks = metadata["chunks"]
+    if not chunks:
+        return SearchResponse(document_id=document_id, hits=[])
     model = get_model()
+    variants, evidence = expand(req.query.strip(), metadata["aliases"], MAX_QUERY_VARIANTS)
+    vectors = np.asarray(model.encode(variants, normalize_embeddings=True), dtype="float32")
+    candidate_k = min(max(req.top_k * CANDIDATE_MULTIPLIER, 20), len(chunks))
+    scores, ids = index.search(vectors, candidate_k)
+    candidates = {}
+    for row_scores, row_ids in zip(scores, ids):
+        for score, idx in zip(row_scores, row_ids):
+            if idx >= 0:
+                candidates[int(idx)] = max(float(score), candidates.get(int(idx), -1.0))
 
-    query_vec = model.encode([req.query], normalize_embeddings=True)
-    query_vec = np.array(query_vec, dtype="float32")
-
-    k = min(req.top_k, len(chunks))
-    scores, ids = index.search(query_vec, k)
-
-    hits = []
-    for score, idx in zip(scores[0], ids[0]):
-        if idx == -1:
+    # Rerank sentence/word-bounded passages from the larger candidate pool.
+    passages = [(idx, text) for idx in candidates
+                for text in units(chunks[idx]["text"], PASSAGE_CHARS)]
+    if not passages:
+        return SearchResponse(document_id=document_id, hits=[])
+    passage_vectors = np.asarray(model.encode([p[1] for p in passages],
+                                normalize_embeddings=True), dtype="float32")
+    relevance = (passage_vectors @ vectors.T).max(axis=1)
+    ranked = sorted(zip(passages, relevance), key=lambda item: (-float(item[1]), item[0][0]))
+    hits, selected, used = [], [], set()
+    for (idx, passage), score in ranked:
+        if idx in used or duplicate(passage, selected):
             continue
         c = chunks[idx]
-        hits.append(SearchHit(text=c["text"], page=c["page"], score=float(score)))
-
+        text = c["text"] if req.context else passage
+        if req.context and duplicate(text, [h.text for h in hits]):
+            continue
+        hits.append(SearchHit(text=text, page=c["page"], score=float(score)))
+        selected.append(passage)
+        used.add(idx)
+        if len(hits) == req.top_k:
+            break
+    # Include the source definition with its own page, never attach invented aliases.
+    if req.context:
+        for alias in evidence[:MAX_QUERY_VARIANTS]:
+            proof = alias.get("evidence")
+            if proof and not any(h.text == proof and h.page == alias["page"] for h in hits):
+                hits.append(SearchHit(text=proof, page=alias["page"], score=0.0))
     return SearchResponse(document_id=document_id, hits=hits)
 
 
 @app.get("/fulltext/{document_id}", response_model=FullTextResponse)
 def fulltext(document_id: str):
     """Return every chunk in order — used by the summary/quiz generation pipeline."""
-    _, chunks = load_index(document_id)
-    index_path, _ = index_paths(document_id)
-    # page_count isn't stored separately; derive from max page seen
-    page_count = max((c["page"] for c in chunks), default=0)
-    ordered = [SearchHit(text=c["text"], page=c["page"], score=0.0) for c in chunks]
+    _, metadata = load_index(document_id)
+    chunks = metadata["chunks"]
+    page_count = metadata.get("page_count", max((c["page"] for c in chunks), default=0))
+    ordered = [ContentHit(text=c.get("source_text", c["text"]), page=c["page"], score=0.0,
+                          heading=c.get("heading", ""), section_id=c.get("section_id", "0"))
+               for c in chunks]
     return FullTextResponse(document_id=document_id, page_count=page_count, chunks=ordered)
 
 

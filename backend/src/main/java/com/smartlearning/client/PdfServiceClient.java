@@ -44,14 +44,27 @@ public class PdfServiceClient {
     }
 
     public List<SearchResultDto> search(String vectorDocId, String query, int topK) {
+        return retrieve(vectorDocId, query, topK, false);
+    }
+
+    public List<SearchResultDto> context(String vectorDocId, String query, int topK) {
+        return retrieve(vectorDocId, query, topK, true);
+    }
+
+    private List<SearchResultDto> retrieve(String vectorDocId, String query, int topK, boolean context) {
         try {
-            SearchRequestBody req = new SearchRequestBody(query, topK);
+            SearchRequestBody req = new SearchRequestBody(query, topK, context);
             SearchResponseBody resp = restTemplate.postForObject(
                     baseUrl + "/search/" + vectorDocId, req, SearchResponseBody.class);
 
             if (resp == null || resp.hits == null) return List.of();
             return resp.hits.stream()
-                    .map(h -> new SearchResultDto(h.text, h.page, h.score))
+                    .map(h -> {
+                        SearchResultDto dto = new SearchResultDto(h.text, h.page, h.score);
+                        dto.setHeading(h.heading == null ? "" : h.heading);
+                        dto.setSectionId(h.sectionId == null ? "0" : h.sectionId);
+                        return dto;
+                    })
                     .collect(Collectors.toList());
         } catch (RestClientException e) {
             throw translate(e, vectorDocId);
@@ -66,7 +79,12 @@ public class PdfServiceClient {
 
             if (resp == null || resp.chunks == null) return List.of();
             return resp.chunks.stream()
-                    .map(h -> new SearchResultDto(h.text, h.page, h.score))
+                    .map(h -> {
+                        SearchResultDto dto = new SearchResultDto(h.text, h.page, h.score);
+                        dto.setHeading(h.heading == null ? "" : h.heading);
+                        dto.setSectionId(h.sectionId == null ? "0" : h.sectionId);
+                        return dto;
+                    })
                     .collect(Collectors.toList());
         } catch (RestClientException e) {
             throw translate(e, vectorDocId);
@@ -121,6 +139,7 @@ public class PdfServiceClient {
         private String query;
         @JsonProperty("top_k")
         private int topK;
+        private boolean context;
     }
 
     @Data
@@ -144,5 +163,8 @@ public class PdfServiceClient {
         private String text;
         private int page;
         private double score;
+        private String heading;
+        @JsonProperty("section_id")
+        private String sectionId;
     }
 }

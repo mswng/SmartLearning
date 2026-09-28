@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { MessageSquare, FileText, HelpCircle, Sparkles } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import { MessageSquare, FileText, HelpCircle } from "lucide-react";
 
-import { documentApi, chatApi, summaryApi, quizApi } from "~/api/index.js";
+import { documentApi, chatApi, quizApi } from "~/api/index.js";
 import ChatMessage from "~/components/chat/ChatMessage.jsx";
 import ChatInput from "~/components/chat/ChatInput.jsx";
+import DocumentSummary from "~/components/summary/DocumentSummary.jsx";
 import QuizQuestionCard from "~/components/quiz/QuizQuestionCard.jsx";
 import Loading from "~/components/common/Loading.jsx";
 import Button from "~/components/common/Button.jsx";
@@ -41,10 +41,6 @@ function DocumentDetailPage() {
   const [messages, setMessages] = useState([]);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef(null);
-
-  // --- tab Tóm tắt ---
-  const [summary, setSummary] = useState(null);
-  const [summaryLoading, setSummaryLoading] = useState(false);
 
   // --- tab Trắc nghiệm ---
   const [quiz, setQuiz] = useState(null);
@@ -97,19 +93,6 @@ function DocumentDetailPage() {
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setSending(false);
-    }
-  };
-
-  const handleSummarize = async () => {
-    setSummaryLoading(true);
-    setError(null);
-    try {
-      const res = await summaryApi.getDocumentSummary(documentId, true);
-      setSummary(res);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setSummaryLoading(false);
     }
   };
 
@@ -175,43 +158,12 @@ function DocumentDetailPage() {
           </div>
         )}
 
-        {activeTab === "summary" && (
-          <div>
-            {!summary && !summaryLoading && (
-              <Button onClick={handleSummarize}>
-                <Sparkles size={16} /> Tạo tóm tắt bằng AI
-              </Button>
-            )}
-
-            {summaryLoading && <Loading label="Đang tóm tắt tài liệu..." />}
-
-            {summary && (
-              <>
-                <div className="document-detail-page__summary-text">
-                  <ReactMarkdown>{summary.overallSummary}</ReactMarkdown>
-                </div>
-
-                {summary.sections?.length > 0 && (
-                  <>
-                    <h3>Theo từng phần</h3>
-                    {summary.sections.map((s, i) => (
-                      <div key={i} className="document-detail-page__section-summary">
-                        <span className="document-detail-page__section-pages">
-                          Trang {s.fromPage}–{s.toPage}
-                        </span>
-                        <ReactMarkdown>{s.summary}</ReactMarkdown>
-                      </div>
-                    ))}
-                  </>
-                )}
-
-                <Button variant="secondary" onClick={handleSummarize} loading={summaryLoading}>
-                  Tóm tắt lại
-                </Button>
-              </>
-            )}
-          </div>
-        )}
+        <DocumentSummary
+          key={documentId}
+          documentId={documentId}
+          active={activeTab === "summary"}
+          onError={setError}
+        />
 
         {activeTab === "quiz" && (
           <div>
